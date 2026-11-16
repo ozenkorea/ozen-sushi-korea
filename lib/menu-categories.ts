@@ -1,6 +1,6 @@
 export const DINING_CATEGORIES = [
   'Appetizer', 'Korean Soup', 'Korean Speciality', 'Hot plate', 'Noodles',
-  'A La Carte', 'Hot Pot', 'Barbecue', 'Beverage',
+  'A La Carte', 'Hot Pot', 'Barbecue', 'Beverage', 'Dessert', 'OZEN Market',
 ] as const;
 
 const aliases: Record<string, string> = {
