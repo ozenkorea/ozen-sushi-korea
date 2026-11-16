@@ -91,6 +91,34 @@ export default function Admin() {
     } catch { setMessage('저장하지 못했습니다. 연결과 관리 권한을 확인한 뒤 다시 시도해주세요.'); }
     finally { setBusy(false); }
   }
+  async function removeItem() {
+    if (!database || !draft || busy || !items.some(item => item.id === draft.id)) return;
+    if (!window.confirm(`“${draft.name_ko || draft.name_en}” 메뉴를 삭제할까요?\n손님 메뉴에서도 제거되며 되돌릴 수 없습니다.`)) return;
+    setBusy(true); setMessage('');
+    try {
+      const { data, error } = await database.from('menu_items').delete().eq('id', draft.id).select('id').single();
+      if (error || !data) throw error || new Error('Delete failed');
+      setItems(current => current.filter(item => item.id !== data.id));
+      setDraft(null); setPhotoSize(''); setMessage('메뉴를 삭제했습니다.');
+    } catch { setMessage('삭제하지 못했습니다. 연결과 관리 권한을 확인한 뒤 다시 시도해주세요.'); }
+    finally { setBusy(false); }
+  }
+  async function moveItem(id: string, direction: -1 | 1) {
+    if (!database || busy || search || status !== 'all') return;
+    const ordered = scopedItems.filter(item => item.category === category);
+    const index = ordered.findIndex(item => item.id === id), target = index + direction;
+    if (index < 0 || target < 0 || target >= ordered.length) return;
+    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+    setBusy(true); setMessage('');
+    try {
+      const { error } = await database.rpc('reorder_menu_items', { ordered_ids: ordered.map(item => item.id) });
+      if (error) throw error;
+      const ranks = new Map(ordered.map((item, position) => [item.id, position * 10]));
+      setItems(current => current.map(item => ranks.has(item.id) ? { ...item, sort_order: ranks.get(item.id)! } : item).sort((a, b) => a.sort_order - b.sort_order || a.name_en.localeCompare(b.name_en)));
+      setMessage('메뉴 순서를 저장했습니다.');
+    } catch { setMessage('순서를 저장하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해주세요.'); }
+    finally { setBusy(false); }
+  }
   async function upload(file?: File) {
     if (!file || !database || !draft) return;
     const types: Record<string,string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
@@ -131,12 +159,12 @@ export default function Admin() {
       {draft && <><span>›</span><span>{draft.name_ko || draft.name_en || '신메뉴 추가'}</span></>}
     </nav>
     {!draft ? <>
-      <div className="owner-toolbar"><div className="owner-switch" aria-label="메뉴 종류">{(['dining','takeout'] as const).map(value => <button key={value} aria-pressed={menuType===value} onClick={() => { setMenuType(value); setCategory(null); setSearch(''); setStatus('all'); setMessage(''); }}>{value==='dining' ? '다이닝 메뉴' : '테이크아웃 메뉴'}</button>)}</div><button className="admin-primary" onClick={addItem}>＋ 신메뉴 추가</button></div>
+      <div className="owner-toolbar"><div className="owner-switch" aria-label="메뉴 종류">{(['dining','takeout'] as const).map(value => <button disabled={busy} key={value} aria-pressed={menuType===value} onClick={() => { setMenuType(value); setCategory(null); setSearch(''); setStatus('all'); setMessage(''); }}>{value==='dining' ? '다이닝 메뉴' : '테이크아웃 메뉴'}</button>)}</div><button className="admin-primary" disabled={busy} onClick={addItem}>＋ 신메뉴 추가</button></div>
       {category === null ? <section className="owner-panel"><div className="owner-section-title"><div><h2>카테고리 선택</h2><p>관리할 카테고리를 선택해주세요.</p></div><span>{categories.length}개 분류 · {scopedItems.length}개 메뉴</span></div>
         {!categories.length ? <p className="owner-empty">아직 등록된 메뉴가 없습니다. 기존 메뉴를 가져오거나 신메뉴를 추가해주세요.</p> : <div className="owner-category-grid">{categories.map(value => { const entries=scopedItems.filter(item=>item.category===value); return <button className="owner-category" key={value} onClick={()=>{setCategory(value);setSearch('');setStatus('all');}}><span className="owner-folder" aria-hidden="true">▤</span><strong>{value.split(' · ')[1] || value}</strong><span>{value.split(' · ')[1] ? value.split(' · ')[0] : '메뉴 관리'}</span><span className="owner-category-count">{entries.length}개 메뉴 <span aria-hidden="true">→</span></span></button>; })}</div>}
-      </section> : <section className="owner-panel"><div className="owner-section-title"><div><button className="owner-back" onClick={()=>{setCategory(null);setSearch('');}}>← 카테고리 목록</button><h2>{category}</h2></div><span>{shownItems.length}개 메뉴</span></div>
-        <div className="owner-search"><label>메뉴 검색<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="한글 또는 영문 메뉴명" /></label><label>표시 상태<select value={status} onChange={e=>setStatus(e.target.value)}><option value="all">전체</option><option value="public">공개 · 판매 중</option><option value="hidden">숨김</option><option value="soldout">품절</option></select></label></div>
-        {!shownItems.length ? <p className="owner-empty">해당 조건의 메뉴가 없습니다.</p> : <div className="owner-menu-grid">{shownItems.map(item=><button className="owner-menu-card" key={item.id} onClick={()=>openItem(item)} aria-label={`${item.name_ko || item.name_en} 상세 수정`}><div className="owner-photo-stage">{item.image_url ? <img src={item.image_url} alt={item.name_en} loading="lazy" /> : <span>사진 없음</span>}</div><div className="owner-menu-card-body"><span className={`owner-status ${!item.visible ? 'is-hidden' : item.sold_out ? 'is-soldout' : 'is-public'}`}>{!item.visible ? '숨김' : item.sold_out ? '품절' : '판매 중'}</span><h3>{item.name_ko || item.name_en}</h3>{item.name_ko && <p>{item.name_en}</p>}<div className="owner-card-bottom"><strong>${Number(item.price).toFixed(2)}</strong><span>상세 수정 →</span></div></div></button>)}</div>}
+      </section> : <section className="owner-panel"><div className="owner-section-title"><div><button className="owner-back" disabled={busy} onClick={()=>{setCategory(null);setSearch('');}}>← 카테고리 목록</button><h2>{category}</h2></div><span>{shownItems.length}개 메뉴</span></div>
+        <div className="owner-search"><label>메뉴 검색<input disabled={busy} value={search} onChange={e=>setSearch(e.target.value)} placeholder="한글 또는 영문 메뉴명" /></label><label>표시 상태<select disabled={busy} value={status} onChange={e=>setStatus(e.target.value)}><option value="all">전체</option><option value="public">공개 · 판매 중</option><option value="hidden">숨김</option><option value="soldout">품절</option></select></label></div>
+        <p className="owner-order-note">메뉴 아래의 ↑ 위로 · ↓ 아래로 버튼으로 순서를 변경하면 바로 저장됩니다.{(search || status !== 'all') && ' 순서를 바꾸려면 검색을 비우고 표시 상태를 전체로 선택해주세요.'}</p>{!shownItems.length ? <p className="owner-empty">해당 조건의 메뉴가 없습니다.</p> : <div className="owner-menu-grid">{shownItems.map(item=><div className="owner-menu-entry" key={item.id}><button disabled={busy} className="owner-menu-card" onClick={()=>openItem(item)} aria-label={`${item.name_ko || item.name_en} 상세 수정`}><div className="owner-photo-stage">{item.image_url ? <img src={item.image_url} alt={item.name_en} loading="lazy" /> : <span>사진 없음</span>}</div><div className="owner-menu-card-body"><span className={`owner-status ${!item.visible ? 'is-hidden' : item.sold_out ? 'is-soldout' : 'is-public'}`}>{!item.visible ? '숨김' : item.sold_out ? '품절' : '판매 중'}</span><h3>{item.name_ko || item.name_en}</h3>{item.name_ko && <p>{item.name_en}</p>}<div className="owner-card-bottom"><strong>${Number(item.price).toFixed(2)}</strong><span>상세 수정 →</span></div></div></button><div className="owner-order-actions"><button type="button" disabled={busy || !!search || status !== 'all' || scopedItems.filter(entry=>entry.category===category)[0]?.id===item.id} onClick={()=>moveItem(item.id,-1)} aria-label={`${item.name_ko || item.name_en} 위로 이동`}>↑ 위로</button><button type="button" disabled={busy || !!search || status !== 'all' || scopedItems.filter(entry=>entry.category===category).slice(-1)[0]?.id===item.id} onClick={()=>moveItem(item.id,1)} aria-label={`${item.name_ko || item.name_en} 아래로 이동`}>↓ 아래로</button></div></div>)}</div>}
       </section>}
     </> : <form className="owner-panel owner-detail" onSubmit={save}>
       <div className="owner-section-title"><div><button type="button" className="owner-back" disabled={busy} onClick={closeDetail}>← 메뉴 목록으로</button><h2>{items.some(item=>item.id===draft.id) ? '메뉴 상세 수정' : '신메뉴 추가'}</h2></div><span>{draft.menu_type==='dining' ? '다이닝' : '테이크아웃'}</span></div>
@@ -151,7 +179,7 @@ export default function Admin() {
           <label>표시 순서 · 작은 숫자부터<input type="number" min="0" step="1" required value={draft.sort_order} onChange={e=>change('sort_order',Number(e.target.value))} /></label>
           <label className="owner-wide">메뉴 설명<textarea maxLength={2000} rows={4} value={draft.description} onChange={e=>change('description',e.target.value)} /></label>
         </div><div className="owner-visibility"><h3>손님 화면 표시</h3><label className="admin-check"><input type="checkbox" checked={draft.visible} onChange={e=>change('visible',e.target.checked)} />메뉴 공개</label><label className="admin-check"><input type="checkbox" checked={draft.sold_out} onChange={e=>change('sold_out',e.target.checked)} />품절 표시</label><p>공개를 끄면 손님 메뉴에서 숨겨집니다.</p></div></section>
-      </fieldset><div className="owner-save-bar"><button type="button" disabled={busy} onClick={closeDetail}>취소 · 목록으로</button><button type="submit" disabled={busy} className="admin-primary">{busy ? '처리 중…' : '수정 / 저장'}</button></div>
+      </fieldset><div className="owner-save-bar">{items.some(item=>item.id===draft.id) && <button type="button" className="owner-delete" disabled={busy} onClick={removeItem}>메뉴 삭제</button>}<button type="button" disabled={busy} onClick={closeDetail}>취소 · 목록으로</button><button type="submit" disabled={busy} className="admin-primary">{busy ? '처리 중…' : '수정 / 저장'}</button></div>
     </form>}
     </>}
   </main>;
