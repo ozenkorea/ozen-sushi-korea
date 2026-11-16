@@ -207,5 +207,6 @@ for item in take:
  elif old:
   item['review_note']=f"동일 번호지만 다이닝 원본은 {old['name_ko']}. 테이크아웃은 {item['name_ko']}. 사진 연결 안 함."
  else:item['review_note']='기존 다이닝 이미지에 없는 메뉴. 사진 추가 필요.'
-(ROOT/'data/menu-import.json').write_text(json.dumps(dining+take,ensure_ascii=False,indent=2)+'\n')
+for i in range(4):
+ (ROOT/f'data/menu-import-{i+1}.json').write_text(json.dumps((dining+take)[i*40:(i+1)*40],ensure_ascii=False,indent=2)+'\n')
 print(json.dumps({'dining':len(dining),'takeout':len(take),'photos':len(boxes),'price_differences':sum('가격 차이' in x['review_note'] for x in take)},ensure_ascii=False))

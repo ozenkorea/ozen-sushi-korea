@@ -1,7 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import original from '../../../data/menu-import.json';
+import part1 from '../../../data/menu-import-1.json';
+import part2 from '../../../data/menu-import-2.json';
+import part3 from '../../../data/menu-import-3.json';
+import part4 from '../../../data/menu-import-4.json';
+const original = [...part1, ...part2, ...part3, ...part4];
 import { database, MenuItem } from '../../../lib/menu';
 type SourceItem = MenuItem & { code: string; source_page: number; review_note: string; photo_box?: number[] };
 const sources = original as SourceItem[];
