@@ -62,3 +62,14 @@ img {
   .menu-shell .menu-mobile-details p{padding-top:3px;overflow-wrap:anywhere}
   .menu-shell .menu-badge{font-size:11px;margin-top:8px;padding:3px 7px}
 }
+
+/* Store selection after owner sign-in. */
+.owner-portal-selector{max-width:1050px;margin:40px auto}
+.owner-portal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.menu-admin .owner-portal-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:36px 28px;min-width:0;border-radius:16px;gap:16px;background:#fff;border-top:5px solid #cf382d}
+.menu-admin .owner-portal-card.is-sushi{border-top-color:#ec6236}
+.owner-portal-card h3{font-size:24px;line-height:1.4;font-weight:700}
+.owner-portal-card p{font-size:14px;line-height:1.7;color:#6c7789}
+.owner-portal-enter{font-size:14px;color:#22346b;margin-top:16px}
+.owner-portal-card:hover{box-shadow:0 6px 22px #20304b14}
+@media(max-width:640px){.owner-portal-grid{grid-template-columns:1fr;gap:16px}.menu-admin .owner-portal-card{padding:24px 20px}.owner-portal-card h3{font-size:21px}.owner-portal-selector{margin:24px auto}}

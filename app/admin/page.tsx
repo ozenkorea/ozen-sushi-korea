@@ -5,6 +5,7 @@ import { DINING_CATEGORIES, diningCategory } from '../../lib/menu-categories';
 export default function Admin() {
   const [ready, setReady] = useState(false), [authorized, setAuthorized] = useState(false);
   const [recovering, setRecovering] = useState(false);
+  const [restaurant, setRestaurant] = useState<MenuItem['restaurant'] | null>(null);
   const [newPassword, setNewPassword] = useState(''), [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState(''), [password, setPassword] = useState('');
   const [items, setItems] = useState<MenuItem[]>([]), [draft, setDraft] = useState<MenuItem | null>(null);
@@ -33,7 +34,7 @@ export default function Admin() {
     async function check() {
       try {
         const { data: { user } } = await client.auth.getUser();
-        if (!user) { if (active) { setAuthorized(false); setItems([]); setDraft(null); } return; }
+        if (!user) { if (active) { setAuthorized(false); setItems([]); setDraft(null); setRestaurant(null); } return; }
         const { data, error } = await client.from('menu_admins').select('user_id').eq('user_id', user.id).maybeSingle();
         if (error) throw error;
         if (active) { setAuthorized(!!data); if (data) await load(); else setMessage('이 계정에는 메뉴 관리 권한이 없습니다.'); }
@@ -43,7 +44,7 @@ export default function Admin() {
     check();
     const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') { setRecovering(true); setReady(true); }
-      if (event === 'SIGNED_OUT') { setRecovering(false); setNewPassword(''); setConfirmPassword(''); }
+      if (event === 'SIGNED_OUT') { setRestaurant(null); setRecovering(false); setNewPassword(''); setConfirmPassword(''); }
       setTimeout(check, 0);
     });
     return () => { active = false; subscription.unsubscribe(); };
@@ -82,21 +83,21 @@ export default function Admin() {
     finally { setBusy(false); }
   }
   async function save(event: FormEvent) {
-    event.preventDefault(); if (!database || !draft) return;
+    event.preventDefault(); if (!database || !draft || !restaurant || draft.restaurant !== restaurant) return;
     setBusy(true); setMessage('');
     try {
-      const { data, error } = await database.from('menu_items').upsert({ ...draft, name_en: draft.name_en.trim(), category: draft.menu_type === 'dining' ? diningCategory(draft.category.trim()) : draft.category.trim() }).select().single();
+      const { data, error } = await database.from('menu_items').upsert({ ...draft, restaurant, name_en: draft.name_en.trim(), category: draft.restaurant === 'korea' && draft.menu_type === 'dining' ? diningCategory(draft.category.trim()) : draft.category.trim() }).select().single();
       if (error || !data) throw error || new Error('Save failed');
       await load(); setMenuType(data.menu_type); setCategory(data.category); setSearch(''); setDraft(null); setPhotoSize(''); setMessage('저장했습니다. 공개한 메뉴는 새로 연 손님 메뉴에 반영됩니다.');
     } catch { setMessage('저장하지 못했습니다. 연결과 관리 권한을 확인한 뒤 다시 시도해주세요.'); }
     finally { setBusy(false); }
   }
   async function removeItem() {
-    if (!database || !draft || busy || !items.some(item => item.id === draft.id)) return;
+    if (!database || !draft || !restaurant || draft.restaurant !== restaurant || busy || !items.some(item => item.id === draft.id)) return;
     if (!window.confirm(`“${draft.name_ko || draft.name_en}” 메뉴를 삭제할까요?\n손님 메뉴에서도 제거되며 되돌릴 수 없습니다.`)) return;
     setBusy(true); setMessage('');
     try {
-      const { data, error } = await database.from('menu_items').delete().eq('id', draft.id).select('id').single();
+      const { data, error } = await database.from('menu_items').delete().eq('id', draft.id).eq('restaurant', restaurant).select('id').single();
       if (error || !data) throw error || new Error('Delete failed');
       setItems(current => current.filter(item => item.id !== data.id));
       setDraft(null); setPhotoSize(''); setMessage('메뉴를 삭제했습니다.');
@@ -120,7 +121,7 @@ export default function Admin() {
     finally { setBusy(false); }
   }
   async function upload(file?: File) {
-    if (!file || !database || !draft) return;
+    if (!file || !database || !draft || draft.restaurant !== restaurant) return;
     const types: Record<string,string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
     if (!types[file.type] || file.size > 5 * 1024 * 1024) { setMessage('사진은 JPG, PNG, WebP 형식으로 5MB 이하를 선택해주세요.'); return; }
     setBusy(true); setMessage('');
@@ -135,25 +136,37 @@ export default function Admin() {
     finally { setBusy(false); }
   }
   const change = (key: keyof MenuItem, value: string | number | boolean) => setDraft(current => current ? { ...current, [key]: value } : current);
-  const scopedItems = items.filter(item => item.restaurant === 'korea' && item.menu_type === menuType).map(item => menuType === 'dining' ? { ...item, category: diningCategory(item.category) } : item);
-  const categories = menuType === 'dining' ? [...DINING_CATEGORIES] : Array.from(new Set(scopedItems.map(item => item.category)));
+  const scopedItems = items.filter(item => item.restaurant === restaurant && item.menu_type === menuType).map(item => restaurant === 'korea' && menuType === 'dining' ? { ...item, category: diningCategory(item.category) } : item);
+  const categories = restaurant === 'korea' && menuType === 'dining' ? [...DINING_CATEGORIES] : Array.from(new Set(scopedItems.map(item => item.category)));
   const shownItems = scopedItems.filter(item => item.category === category && `${item.name_en} ${item.name_ko}`.toLowerCase().includes(search.toLowerCase()) && (status === 'all' || status === 'hidden' && !item.visible || status === 'public' && item.visible && !item.sold_out || status === 'soldout' && item.sold_out));
-  function openItem(item: MenuItem) { setPhotoSize(''); setMessage(''); setDraft({ ...item }); }
+  function openItem(item: MenuItem) { if (item.restaurant !== restaurant) return; setPhotoSize(''); setMessage(''); setDraft({ ...item }); }
   function closeDetail() {
     if (busy || draft && !window.confirm('저장하지 않은 변경 내용을 취소하고 메뉴 목록으로 돌아갈까요?')) return;
     setDraft(null); setPhotoSize(''); setMessage('');
   }
-  function addItem() { openItem({ ...emptyItem(), price: 99, menu_type: menuType, category: category || (menuType === 'dining' ? 'Appetizer' : ''), sort_order: scopedItems.length ? Math.max(...scopedItems.map(item => item.sort_order)) + 10 : 0 }); }
+  function addItem() { if (!restaurant) return; openItem({ ...emptyItem(), restaurant, price: 99, menu_type: menuType, category: category || (restaurant === 'korea' && menuType === 'dining' ? 'Appetizer' : ''), sort_order: scopedItems.length ? Math.max(...scopedItems.map(item => item.sort_order)) + 10 : 0 }); }
+  function selectRestaurant(next: MenuItem['restaurant'] | null) {
+    if (busy || draft && !window.confirm('저장하지 않은 변경 내용을 취소하고 매장을 변경할까요?')) return;
+    setRestaurant(next); setMenuType('dining'); setCategory(null); setDraft(null);
+    setSearch(''); setStatus('all'); setPhotoSize(''); setMessage('');
+  }
   return <main className={`menu-admin ${authorized && !recovering ? 'admin-workspace' : ''}`}>
-    <header><div><p className="menu-eyebrow">OZEN · OWNER PORTAL</p><h1>메뉴 관리</h1><p>사진, 가격, 신메뉴를 한곳에서 관리하세요.</p></div>{authorized && <button disabled={busy} onClick={async () => { if (!database || draft && !window.confirm('저장하지 않은 변경 내용을 취소하고 로그아웃할까요?')) return; const { error } = await database.auth.signOut(); if (error) setMessage('로그아웃하지 못했습니다. 다시 시도해주세요.'); }}>로그아웃</button>}</header>
+    <header><div><p className="menu-eyebrow">OZEN · OWNER PORTAL</p><h1>{restaurant === 'korea' ? '오젠코리아 관리자 포탈' : restaurant === 'sushi' ? '오젠스시 관리자 포탈' : '관리자 포탈'}</h1><p>{restaurant ? '사진, 가격, 신메뉴를 한곳에서 관리하세요.' : '로그인 후 관리할 매장을 선택해주세요.'}</p></div>{authorized && <button disabled={busy} onClick={async () => { if (!database || draft && !window.confirm('저장하지 않은 변경 내용을 취소하고 로그아웃할까요?')) return; const { error } = await database.auth.signOut(); if (error) setMessage('로그아웃하지 못했습니다. 다시 시도해주세요.'); }}>로그아웃</button>}</header>
     <p role="status" aria-live="polite">{message}</p>
-    {!database ? <div className="admin-panel"><h2>메뉴 관리 연결 준비 중</h2><p>관리자 로그인과 사진 저장 공간을 연결한 뒤 사용할 수 있습니다. 현재 메뉴는 기존 방식으로 표시됩니다.</p></div> : !ready ? <p>확인 중…</p> : recovering ? <form className="admin-panel admin-login" onSubmit={resetPassword}><h2>새 비밀번호 설정</h2><label>새 비밀번호<input type="password" autoComplete="new-password" minLength={12} required value={newPassword} onChange={e => setNewPassword(e.target.value)} /></label><label>새 비밀번호 확인<input type="password" autoComplete="new-password" minLength={12} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label><button className="admin-primary" disabled={busy}>비밀번호 저장</button></form> : !authorized ? <form className="admin-panel admin-login" onSubmit={login}><h2>관리자 로그인</h2><label>이메일<input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label><label>비밀번호<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label><button className="admin-primary" disabled={busy}>로그인</button><button type="button" disabled={busy} onClick={requestReset}>비밀번호를 잊으셨나요?</button></form> : <>
+    {!database ? <div className="admin-panel"><h2>메뉴 관리 연결 준비 중</h2><p>관리자 로그인과 사진 저장 공간을 연결한 뒤 사용할 수 있습니다. 현재 메뉴는 기존 방식으로 표시됩니다.</p></div> : !ready ? <p>확인 중…</p> : recovering ? <form className="admin-panel admin-login" onSubmit={resetPassword}><h2>새 비밀번호 설정</h2><label>새 비밀번호<input type="password" autoComplete="new-password" minLength={12} required value={newPassword} onChange={e => setNewPassword(e.target.value)} /></label><label>새 비밀번호 확인<input type="password" autoComplete="new-password" minLength={12} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label><button className="admin-primary" disabled={busy}>비밀번호 저장</button></form> : !authorized ? <form className="admin-panel admin-login" onSubmit={login}><h2>관리자 로그인</h2><label>이메일<input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label><label>비밀번호<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label><button className="admin-primary" disabled={busy}>로그인</button><button type="button" disabled={busy} onClick={requestReset}>비밀번호를 잊으셨나요?</button></form> : restaurant === null ? <section className="owner-panel owner-portal-selector">
+      <div className="owner-section-title"><div><h2>매장 선택</h2><p>관리할 매장의 관리자 포탈을 선택해주세요.</p></div></div>
+      <div className="owner-portal-grid">
+        <button type="button" className="owner-portal-card is-korea" onClick={() => selectRestaurant('korea')}><span className="menu-eyebrow">OZEN KOREA</span><h3>오젠코리아 관리자 포탈</h3><p>오젠코리아의 메뉴, 사진, 가격을 관리합니다.</p><span className="owner-portal-enter">포탈 들어가기 →</span></button>
+        <button type="button" className="owner-portal-card is-sushi" onClick={() => selectRestaurant('sushi')}><span className="menu-eyebrow">OZEN SUSHI</span><h3>오젠스시 관리자 포탈</h3><p>오젠스시의 메뉴, 사진, 가격을 관리합니다.</p><span className="owner-portal-enter">포탈 들어가기 →</span></button>
+      </div>
+    </section> : <>
     <div className="owner-tools">
-      <a href="/admin/review">기존 메뉴 검토·가져오기</a>
-      <a href={menuType === 'dining' ? '/ozen-korea/menu' : '/ozen-korea/takeout'} target="_blank" rel="noreferrer">손님 메뉴 보기 ↗</a>
+      {restaurant === 'korea' && <a href="/admin/review">기존 메뉴 검토·가져오기</a>}
+      <a href={`/ozen-${restaurant}/${menuType === 'dining' ? 'menu' : 'takeout'}`} target="_blank" rel="noreferrer">손님 메뉴 보기 ↗</a>
       <button type="button" disabled={busy || !!draft} onClick={() => setRecovering(true)}>비밀번호 변경</button>
     </div>
     <nav className="owner-breadcrumb" aria-label="현재 위치">
+      <button disabled={busy} onClick={() => selectRestaurant(null)}>← 매장 선택</button><span>›</span>
       <button disabled={busy} onClick={() => { if (draft) { closeDetail(); return; } setCategory(null); setSearch(''); setStatus('all'); }}>메뉴 관리</button>
       {category !== null && <><span>›</span><button disabled={busy} onClick={() => { if (draft) closeDetail(); }}>{category}</button></>}
       {draft && <><span>›</span><span>{draft.name_ko || draft.name_en || '신메뉴 추가'}</span></>}
@@ -175,7 +188,7 @@ export default function Admin() {
           <label>영문 메뉴명<input required maxLength={150} value={draft.name_en} onChange={e=>change('name_en',e.target.value)} /></label>
           <label>가격 (CAD)<input type="number" required min="0" max="9999.99" step="0.01" value={draft.price} onChange={e=>change('price',Number(e.target.value))} /></label>
           <label>메뉴 종류<select value={draft.menu_type} onChange={e=>change('menu_type',e.target.value)}><option value="dining">다이닝</option><option value="takeout">테이크아웃</option></select></label>
-          <label>카테고리{draft.menu_type === 'dining' ? <select required value={diningCategory(draft.category)} onChange={e=>change('category',e.target.value)}><option value="" disabled>카테고리 선택</option>{DINING_CATEGORIES.map(value=><option key={value} value={value}>{value}</option>)}</select> : <><input list="owner-category-options" required maxLength={100} value={draft.category} onChange={e=>change('category',e.target.value)} placeholder="기존 분류 선택 또는 새 이름 입력" /><datalist id="owner-category-options">{Array.from(new Set(items.filter(item=>item.menu_type===draft.menu_type && item.restaurant==='korea').map(item=>item.category))).map(value=><option key={value} value={value}/>)}</datalist></>}</label>
+          <label>카테고리{draft.restaurant === 'korea' && draft.menu_type === 'dining' ? <select required value={diningCategory(draft.category)} onChange={e=>change('category',e.target.value)}><option value="" disabled>카테고리 선택</option>{DINING_CATEGORIES.map(value=><option key={value} value={value}>{value}</option>)}</select> : <><input list="owner-category-options" required maxLength={100} value={draft.category} onChange={e=>change('category',e.target.value)} placeholder="기존 분류 선택 또는 새 이름 입력" /><datalist id="owner-category-options">{Array.from(new Set(items.filter(item=>item.menu_type===draft.menu_type && item.restaurant===draft.restaurant).map(item=>item.category))).map(value=><option key={value} value={value}/>)}</datalist></>}</label>
           <label>표시 순서 · 작은 숫자부터<input type="number" min="0" step="1" required value={draft.sort_order} onChange={e=>change('sort_order',Number(e.target.value))} /></label>
           <label className="owner-wide">메뉴 설명<textarea maxLength={2000} rows={4} value={draft.description} onChange={e=>change('description',e.target.value)} /></label>
         </div><div className="owner-visibility"><h3>손님 화면 표시</h3><label className="admin-check"><input type="checkbox" checked={draft.visible} onChange={e=>change('visible',e.target.checked)} />메뉴 공개</label><label className="admin-check"><input type="checkbox" checked={draft.sold_out} onChange={e=>change('sold_out',e.target.checked)} />품절 표시</label><p>공개를 끄면 손님 메뉴에서 숨겨집니다.</p></div></section>
