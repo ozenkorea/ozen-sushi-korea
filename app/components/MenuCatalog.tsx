@@ -29,7 +29,7 @@ export default function MenuCatalog({ type }: { type: 'dining' | 'takeout' }) {
       <div className="menu-categories">{['All', ...categories].map(value => <button key={value} aria-pressed={category === value} onClick={() => setCategory(value)}>{value}</button>)}</div>
       <div className="menu-grid">{items.filter(item => category === 'All' || category === item.category).map(item => <article className="menu-card" key={item.id}>
         {item.image_url && <img src={item.image_url} alt={item.name_en} loading="lazy" />}
-        <div className="menu-card-body"><p className="menu-eyebrow">{item.category}</p><div className="menu-item-title"><h2>{item.name_en}</h2><strong>${Number(item.price).toFixed(2)}</strong></div>{item.name_ko && <p className="menu-korean">{item.name_ko}</p>}<p>{item.description}</p>{item.sold_out && <span className="menu-badge">Sold out · 품절</span>}</div>
+        <div className="menu-card-body"><p className="menu-eyebrow">{item.category}</p><div className="menu-item-title"><h2>{item.name_en}</h2><strong>${Number(item.price).toFixed(2)}</strong></div>{item.name_ko && <p className="menu-korean">{item.name_ko}</p>}{item.description && <><p className="menu-description">{item.description}</p><details className="menu-mobile-details"><summary aria-label={`Details for ${item.name_en}`}>Details · 상세</summary><p>{item.description}</p></details></>}{item.sold_out && <span className="menu-badge">Sold out · 품절</span>}</div>
       </article>)}</div><p className="menu-footnote">Prices in CAD. Please tell our team about any food allergies.</p>
     </>}
   </section>;
