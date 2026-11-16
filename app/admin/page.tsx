@@ -48,7 +48,11 @@ export default function Admin() {
     setBusy(true); setMessage('');
     try {
       const { error } = await database.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/admin` });
-      if (error) throw error;
+      if (error) {
+        const hint = error.code === 'email_address_not_authorized' ? 'Supabase 기본 이메일은 프로젝트 팀에 등록된 주소로만 보낼 수 있습니다. ' : error.status === 429 ? '이메일 요청 횟수 제한에 걸렸습니다. 잠시 후 다시 시도해주세요. ' : '';
+        setMessage(`${hint}${error.message} (오류: ${error.code || error.status || 'unknown'})`);
+        return;
+      }
       setMessage('등록된 계정이면 재설정 이메일이 발송됩니다. 메일의 링크를 이 브라우저에서 열어주세요.');
     } catch { setMessage('재설정 이메일을 요청하지 못했습니다. 잠시 후 다시 시도해주세요.'); }
     finally { setBusy(false); }
