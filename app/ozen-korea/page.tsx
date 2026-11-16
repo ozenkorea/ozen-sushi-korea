@@ -1,13 +1,9 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { BlackBgBtn, RedBgBtn } from "app/components/button";
+import { BlackBgBtn, RedBgBtn, RedBgAnchor } from "app/components/button";
 import image9928Large from "public/images/ozen-korea/img_9928.png";
 import image_9930 from "public/images/ozen-korea/img_9930.png";
-import food63 from "public/images/ozen-korea/food63.png";
-import food64 from "public/images/ozen-korea/food64.png";
-import food65 from "public/images/ozen-korea/food65.png";
-import food66 from "public/images/ozen-korea/food66.png";
 import DiscountOfferSection from "app/components/DiscountOfferSection";
 import { ozen_sushi_home } from "app/utils/routes";
 import { OzenKoreaDivider } from "app/components/OzenKoreaDivider";
@@ -16,24 +12,6 @@ const SECTION_GAP_IN_MOBILE = "mb-[max(30px,8vw)]";
 
 function OzenKoreaHome() {
   const router = useRouter();
-  const foodImagesInSec3 = [
-    {
-      src: food63,
-      alt: "salmin sushi",
-    },
-    {
-      src: food64,
-      alt: "rolls1",
-    },
-    {
-      src: food65,
-      alt: "rolls2",
-    },
-    {
-      src: food66,
-      alt: "rolls3",
-    },
-  ];
   return (
     <>
       <section className="relative w-full md:px-[max(20px,5.33vw)]">
@@ -59,9 +37,9 @@ function OzenKoreaHome() {
               and tasteful ingredients straight out of love.
             </div>
             <div className="flex gap-x-7 md:gap-x-[10px]">
-              <RedBgBtn className="w-[clamp(140px,14.28vw,200px)] h-[clamp(40px,3.92vw,55px)] md:w-[max(140px,37.55vw)] md:h-[max(40px,7vw)] md:text-[clamp(10px,3.2vw,20px)]">
-                Learn More
-              </RedBgBtn>
+              <RedBgAnchor href="/ozen-korea/menu" className="w-[clamp(140px,14.28vw,200px)] h-[clamp(40px,3.92vw,55px)] md:w-[max(140px,37.55vw)] md:h-[max(40px,7vw)] md:text-[clamp(10px,3.2vw,20px)]">
+                See Menu
+              </RedBgAnchor>
               <BlackBgBtn
                 className="w-[clamp(140px,14.28vw,200px)] h-[clamp(40px,3.92vw,55px)] md:w-[max(140px,37.55vw)] md:h-[max(40px,7vw)] md:text-[clamp(10px,3.2vw,20px)]"
                 onClick={(event) => {
@@ -92,29 +70,6 @@ function OzenKoreaHome() {
       <WhatWeServeMobile />
       <WhatWeServeDesktop />
       <DiscountOfferSection />
-      <section className="relative py-24 bg-white md:pt-8 md:pb-3">
-        <div className="text-center mb-3">
-          <span className="font-montserrat font-semibold text-[clamp(38px,3vw,50px)] text-191919 md:text-[max(20px,5.33vw)]">
-            Check out{" "}
-            <span className="font-montserrat text-[clamp(38px,3vw,50px)] text-CF382D border-CF382D md:text-[max(20px,5.33vw)]">
-              Our stories
-            </span>
-          </span>
-        </div>
-        <div className="flex justify-center md:hidden">
-          <div className="border-2 border-CF382D w-14 mb-10" />
-        </div>
-        <div className="flex gap-x-3 w-full md:grid grid-rows-2 grid-cols-2 md:gap-2">
-          {foodImagesInSec3.map((image) => (
-            <Image
-              key={image.alt}
-              alt={image.alt}
-              src={image.src}
-              className="h-full max-h-full w-full max-w-full overflow-hidden md:w-full"
-            />
-          ))}
-        </div>
-      </section>
     </>
   );
 }

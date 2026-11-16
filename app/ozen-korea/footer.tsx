@@ -57,6 +57,7 @@ function Footer() {
               className={`w-2/3 ${infoTextSize} mb-5 md:text-white md:text-center`}
             >
               541 Oxford St W, London, ON N6H 4L1
+              <a className="block mt-2 underline underline-offset-4" href="tel:+15196417997">519-641-7997</a>
             </div>
             <div className="w-5 md:hidden">
               <a href="https://www.instagram.com/ozenlondon/">
