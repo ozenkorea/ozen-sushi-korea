@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { database, MenuItem } from '../../lib/menu';
 import LegacyKoreaMenu from './LegacyKoreaMenu';
+import { DINING_CATEGORIES, diningCategory } from '../../lib/menu-categories';
 export default function MenuCatalog({ type }: { type: 'dining' | 'takeout' }) {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(!!database);
@@ -13,14 +14,14 @@ export default function MenuCatalog({ type }: { type: 'dining' | 'takeout' }) {
     async function load() {
       if (!database) return;
       const { data, error } = await database.from('menu_items').select('*').eq('restaurant', 'korea').eq('menu_type', type).eq('visible', true).order('sort_order').order('name_en');
-      if (active) { setItems(data || []); setFailed(!!error); setLoading(false); }
+      if (active) { setItems((data || []).map(item => type === 'dining' ? { ...item, category: diningCategory(item.category) } : item)); setFailed(!!error); setLoading(false); }
     }
     load();
     const refresh = () => { if (document.visibilityState === 'visible') load(); };
     document.addEventListener('visibilitychange', refresh);
     return () => { active = false; document.removeEventListener('visibilitychange', refresh); };
   }, [type]);
-  const categories = Array.from(new Set(items.map(item => item.category)));
+  const categories = type === 'dining' ? DINING_CATEGORIES.filter(value => items.some(item => item.category === value)) : Array.from(new Set(items.map(item => item.category)));
   return <section className="menu-shell">
     <p className="menu-eyebrow">OZEN KOREA · LONDON</p><h1>{type === 'dining' ? 'Dine-in Menu' : 'Takeout Menu'}</h1><p className="menu-subtitle">Korean favourites, made with care.</p>
     <nav className="menu-tabs" aria-label="Menu type"><Link aria-current={type === 'dining' ? 'page' : undefined} href="/ozen-korea/menu">Dine-in · 매장 메뉴</Link><Link aria-current={type === 'takeout' ? 'page' : undefined} href="/ozen-korea/takeout">Takeout · 포장 메뉴</Link></nav>
