@@ -31,16 +31,12 @@ function Footer() {
               <div
                 className={`flex flex-col gap-y-2 ${infoTextSize} md:justify-center text-white`}
               >
-                <span>Mon to Fri</span>
-                <span>Saturday</span>
-                <span>Sunday</span>
+                <span>Mon-Sun</span>
               </div>
               <div
                 className={`flex flex-col gap-y-2 ${infoTextSize} text-white`}
               >
-                <span>11:30am - 10:00pm</span>
-                <span>11:30am - 10:00pm</span>
-                <span>11:30am - 09:30pm</span>
+                <span>11:30am ~ 10:00pm</span>
               </div>
             </div>
           </div>
