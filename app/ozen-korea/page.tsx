@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { BlackBgBtn, RedBgBtn, RedBgAnchor } from "app/components/button";
+import Link from "next/link";
+import { RedBgBtn, RedBgAnchor } from "app/components/button";
 import image9928Large from "public/images/ozen-korea/img_9928.png";
 import image_9930 from "public/images/ozen-korea/img_9930.png";
 import DiscountOfferSection from "app/components/DiscountOfferSection";
@@ -11,7 +11,6 @@ import { OzenKoreaDivider } from "app/components/OzenKoreaDivider";
 const SECTION_GAP_IN_MOBILE = "mb-[max(30px,8vw)]";
 
 function OzenKoreaHome() {
-  const router = useRouter();
   return (
     <>
       <section className="relative w-full md:px-[max(20px,5.33vw)]">
@@ -36,19 +35,19 @@ function OzenKoreaHome() {
               The unique taste comes from family recipes and from fresh simple
               and tasteful ingredients straight out of love.
             </div>
-            <div className="flex gap-x-7 md:gap-x-[10px]">
-              <RedBgAnchor href="/ozen-korea/menu" className="w-[clamp(140px,14.28vw,200px)] h-[clamp(40px,3.92vw,55px)] md:w-[max(140px,37.55vw)] md:h-[max(40px,7vw)] md:text-[clamp(10px,3.2vw,20px)]">
+            <div className="flex flex-col items-center gap-4 w-full mt-3">
+              <RedBgAnchor
+                href="/ozen-korea/menu"
+                className="w-full max-w-[360px] h-[72px] text-[22px] font-bold md:max-w-[320px] md:h-[64px] md:text-[20px]"
+              >
                 See Menu
               </RedBgAnchor>
-              <BlackBgBtn
-                className="w-[clamp(140px,14.28vw,200px)] h-[clamp(40px,3.92vw,55px)] md:w-[max(140px,37.55vw)] md:h-[max(40px,7vw)] md:text-[clamp(10px,3.2vw,20px)]"
-                onClick={(event) => {
-                  event?.preventDefault();
-                  router.push(`${ozen_sushi_home}`);
-                }}
+              <Link
+                href={ozen_sushi_home}
+                className="inline-flex items-center gap-2 py-2 text-[15px] md:text-[14px] text-white/80 hover:text-white transition-colors"
               >
-                Go to Ozen Sushi
-              </BlackBgBtn>
+                <span aria-hidden="true">→</span> Go to Ozen Sushi
+              </Link>
             </div>
           </div>
           <div className="flex-1">
