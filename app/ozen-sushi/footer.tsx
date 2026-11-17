@@ -32,12 +32,12 @@ function Footer() {
               <div
                 className={`flex flex-col gap-y-2 ${infoTextSize} md:justify-center`}
               >
-                <span>Mon to Thur & Sunday</span>
-                <span>Friday & Saturday</span>
+                <span>Sun–Thu</span>
+                <span>Fri–Sat</span>
               </div>
               <div className={`flex flex-col gap-y-2 ${infoTextSize}`}>
-                <span>12am - 9pm</span>
-                <span>12am - 9:30pm</span>
+                <span>12:00pm ~ 1:00am</span>
+                <span>12:00pm ~ 2:00am</span>
               </div>
             </div>
           </div>
@@ -58,6 +58,7 @@ function Footer() {
               className={`w-2/3 ${infoTextSize} mb-5 md:text-191919 md:text-center`}
             >
               607 Richmond St, London ON N6A 3G3
+              <a className="block mt-2 underline underline-offset-4" href="tel:+15196422558">519-642-2558</a>
             </div>
             <div className="w-5 md:hidden">
               <a href="https://www.instagram.com/ozenlondon/">
