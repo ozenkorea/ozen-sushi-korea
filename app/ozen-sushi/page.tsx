@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { BlueBgBtn, OrangeBgBtn } from "../components/button";
+import Link from "next/link";
+import { OrangeBgBtn, OrangeBgAnchor } from "../components/button";
 import { ANIMATION_CONFIGUARTION } from "app/utils/constants";
 import salmonRiceBowl from "public/images/ozen-sushi/sushi_bowl.png";
 import image144 from "public/images/ozen-sushi/image_144.png";
@@ -20,7 +20,6 @@ import { OzenSushiDivider } from "app/components/OzenSushiDivider";
 const textSize = `text-[clamp(14px,1.14vw,28px)]`;
 
 function OzenSushiHome() {
-  const router = useRouter();
   const foodImages = [
     {
       src: image_104,
@@ -67,19 +66,19 @@ function OzenSushiHome() {
               The unique taste comes from family recipes and from fresh simple
               and tasteful ingredients straight out of love.
             </div>
-            <div className="flex gap-x-7 md:justify-center md:gap-x-[10px] md:w-[max(290px,77.33vw)] md:h-[clamp(40px,10.66vw,58px)]">
-              <OrangeBgBtn className="w-[min(200px,14.28vw)] h-[clamp(40px,3.92vw,55px)] md:w-full md:h-full">
-                Learn More
-              </OrangeBgBtn>
-              <BlueBgBtn
-                className="w-[min(200px,14.28vw)] h-[clamp(40px,3.92vw,55px)] md:w-full md:h-full"
-                onClick={(event) => {
-                  event?.preventDefault();
-                  router.push(`${ozen_korea_home}`);
-                }}
+            <div className="flex flex-col items-center gap-4 w-full mt-3">
+              <OrangeBgAnchor
+                href="/ozen-sushi/menu"
+                className="w-full max-w-[360px] h-[72px] text-[22px] font-bold md:max-w-[320px] md:h-[64px] md:text-[20px]"
               >
-                Go to Ozen Korea
-              </BlueBgBtn>
+                See Menu
+              </OrangeBgAnchor>
+              <Link
+                href={ozen_korea_home}
+                className="inline-flex items-center gap-2 py-2 text-[15px] md:text-[14px] text-191919 hover:text-EC6236 transition-colors"
+              >
+                <span aria-hidden="true">→</span> Go to Ozen Korea
+              </Link>
             </div>
           </div>
           <div className="flex-1 md:flex-initial">
