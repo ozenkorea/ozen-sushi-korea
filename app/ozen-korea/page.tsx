@@ -50,11 +50,11 @@ function OzenKoreaHome() {
               </Link>
             </div>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 flex items-center md:hidden">
             <Image
               alt="image9928"
               src={image9928Large}
-              className={`right-[6vw] z-10 w-[43vw] h-full md:hidden`}
+              className={`right-[6vw] z-10 w-[43vw] h-auto object-contain md:hidden`}
             />
           </div>
         </div>
